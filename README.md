@@ -1,5 +1,7 @@
 "# System-Design Reference Notes"
 
+![System Design Overview](images/jj3A5N8.png)
+
 ## Table of Contents
 - [Domain Name System](#domain-name-system)
 - [Content Delivery Networks](#content-delivery-networks)
