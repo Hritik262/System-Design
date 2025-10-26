@@ -1,4 +1,4 @@
-"# System-Design Reference Notes"
+# System-Design Reference Notes
 
 ![System Design Overview](images/jj3A5N8.png)
 
