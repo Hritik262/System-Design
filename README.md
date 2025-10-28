@@ -7,6 +7,7 @@
 - [Content Delivery Networks](#content-delivery-networks)
 - [Load Balancer](#load-balancer)
 - [Horizontal Scaling](#horizontal-scaling)
+- [Application Layer](#application-layer-separation-from-web-layer)
 
 ## Domain Name System
 A Domain Name System (DNS) translates a domain name such as www.example.com to an IP address.
@@ -166,3 +167,62 @@ Adding more machines/servers to a system to distribute the workload and increase
 
 #### Downstream Scaling
 - As upstream application servers scale horizontally, downstream services (like databases, caches, message queues) must also be able to handle the increased number of simultaneous connections and requests. They might also need to scale horizontally or vertically.
+
+## Application Layer (Separation from Web Layer)
+
+### Concept
+This involves separating the Web Layer (responsible for user interface, serving static assets like HTML/CSS, handling browser requests) from the Application Layer (where the core business logic, data processing, and API endpoints reside).
+
+The Application Layer is sometimes also referred to as the "Platform Layer."
+
+### Advantages
+
+#### Independent Scaling & Configuration
+- Allows the web and application layers to be scaled and configured independently.
+- **Benefit**: If the website UI experiences high traffic (e.g., many users browsing), you can add more web servers without needing to scale the application servers. Conversely, if your APIs are heavily used for complex processing, you can scale only the application servers. This leads to more efficient resource utilization.
+
+#### Modular Development & Growth
+- Adding new API functionality often only requires adding or modifying application servers, without necessarily impacting the web servers.
+- **Single Responsibility Principle**: This architecture encourages breaking down a large system into smaller, autonomous services (often called microservices), where each service has a single, well-defined responsibility.
+- **Rapid Growth**: Smaller teams working on smaller, independent services can plan and execute changes more aggressively, leading to faster development and growth.
+
+### Disadvantages & Considerations
+
+#### Increased Complexity (Architectural & Operational)
+- Moving from a monolithic system (where all functionality is in one large application) to an architecture with a separate Application Layer (especially with loosely coupled services like microservices) introduces significant complexity.
+- Requires a different approach to architecture, operations, and development processes.
+
+#### Deployment & Operations Challenges
+- Managing, deploying, and monitoring multiple independent services (microservices) is inherently more complex than managing a single monolithic application.
+- This often necessitates robust automation tools (e.g., CI/CD pipelines, container orchestration platforms like Kubernetes) for effective management.
+
+### Microservices
+Related to the "Application Layer" discussion are microservices, which can be described as a suite of independently deployable, small, modular services. Each service runs a unique process and communicates through a well-defined, lightweight mechanism to serve a business goal.
+
+**Example**: Pinterest could have the following microservices: user profile, follower, feed, search, photo upload, etc.
+
+### Service Discovery
+
+#### Purpose
+In distributed systems, services need to find and communicate with each other dynamically. Service Discovery solves this by helping services locate one another.
+
+#### How it Works
+- **Registration**: Services, when they start, register their names, IP addresses, and ports with a Service Discovery system.
+- **Discovery**: Other services query this system to find the network location of the services they need to interact with.
+
+#### Why it's Needed
+Modern applications have dynamic services (IPs change, instances come and go), making manual configuration impractical.
+
+#### Common Systems
+- Consul
+- Etcd (often used with Kubernetes)
+- Zookeeper
+
+#### Health Checks
+- Service Discovery systems perform regular health checks on registered services to verify their integrity and availability.
+- Typically done via an HTTP endpoint (e.g., /health).
+- Unhealthy services are automatically removed from the discovery pool to prevent traffic from being routed to them.
+
+#### Key-Value Store (Optional)
+- Some systems like Consul and Etcd include a built-in key-value store.
+- Useful for storing configuration values (e.g., database credentials, feature flags) and other shared application data.
