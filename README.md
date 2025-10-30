@@ -449,3 +449,105 @@ Graph databases excel when the relationships between entities are the most criti
 
 **Flexibility:**
 The sparse nature and lack of a strict schema per row make it highly flexible for varying data structures across different entries.
+
+### SQL Databases
+
+#### Replication
+Replication is the process of copying data from one database to another. Replication is used to increase availability and scalability of databases. There are two types of replication: master-slave and master-master.
+
+**Master-slave Replication:**
+The master serves reads and writes, replicating writes to one or more slaves, which serve only reads. Slaves can also replicate to additional slaves in a tree-like fashion. If the master goes offline, the system can continue to operate in read-only mode until a slave is promoted to a master or a new master is provisioned.
+
+**Master-master Replication:**
+Both masters serve reads and writes and coordinate with each other on writes. If either master goes down, the system can continue to operate with both reads and writes.
+
+#### Sharding: Comprehensive Notes
+
+##### 1. What is Sharding?
+**Core Idea:** Sharding is a database scaling technique where data is distributed across multiple smaller, separate, and independent databases. Each of these smaller databases (called a shard) manages only a subset of the total data.
+
+**Why is it necessary?** When your data volume or transaction load becomes too large for a single database server (no matter how powerful it is) to handle efficiently, Sharding comes into play. It's a method of horizontal scaling, meaning you add more machines to distribute the load, rather than upgrading a single, more powerful machine.
+
+##### 2. How Does Sharding Work?
+- **Data Distribution:** Data is partitioned and distributed to different shards based on a shard key. The shard key is a specific column (e.g., user_id, product_id) whose value determines which shard a particular piece of data will reside on.
+  - Example: If user_id is the shard key, a hash value or range of the user_id will decide which shard the user's data goes to.
+- **Independence:** Each shard is a complete, independent database instance. It has its own CPU, memory, and storage. This means that if one shard fails, the others continue to operate.
+- **Cluster:** These individual shards collectively form a larger database cluster that manages the entire dataset.
+- **Shard Router/Query Coordinator:** An additional layer exists to intercept incoming queries and intelligently redirect them to the correct shard. Clients typically interact with this router, not directly with the individual shards.
+
+##### 3. Visualization and Example: "Users Database" (E-commerce Platform)
+Consider a large e-commerce website with millions of users. Managing all user data (profiles, orders, preferences) on a single database server becomes challenging. Query performance and write throughput become significant bottlenecks.
+
+**Without Sharding:**
+```
+                  +--------------------------------+
+                  | Main Database Server (Monolith)|
+                  | (Handles ALL Users' Data)      |
+                  | CPU, RAM, Storage (Can become  |
+                  |     a bottleneck at scale)     |
+                  +---------------+----------------+
+                                  |
+                                  | High Traffic
+                  +---------------+----------------+
+                  | Website/Application Servers    |
+                  +--------------------------------+
+```
+
+**Problem:** As the number of users grows, this "Main Database Server" will become a bottleneck. Queries will slow down, write latencies will increase, and the risk of server failure due to overload will rise.
+
+**With Sharding:**
+We partition the user data based on user_id across multiple shards. Let's assume we've set up 3 shards:
+
+```
+                  +------------------------------------------------+
+                  |           Shard Router / Query Coordinator     |
+                  | (Intelligently directs requests to the correct |
+                  |  shard based on the shard key)                 |
+                  +--------------------+---------------------------+
+                                       |
+                                       |
+           +---------------------------+---------------------------+
+           |                           |                           |
+  +--------v--------+       +----------v----------+       +--------v--------+
+  |    Shard 1      |       |      Shard 2        |       |    Shard 3      |
+  | (Users 1-1M)    |       | (Users 1M-2M)       |       | (Users 2M-3M)   |
+  | DB Server A     |       | DB Server B         |       | DB Server C     |
+  | (Only a subset  |       | (Only a subset      |       | (Only a subset  |
+  |  of the data)   |       |  of the data)       |       |  of the data)   |
+  +-----------------+       +---------------------+       +-----------------+
+```
+
+**Shard Key Example (user_id as Shard Key):**
+- If user_id is our chosen shard key:
+  - Data for User IDs from 1 to 1 Million is stored on Shard 1.
+  - Data for User IDs from 1 Million 1 to 2 Million is stored on Shard 2.
+  - Data for User IDs from 2 Million 1 to 3 Million is stored on Shard 3.
+- This distribution strategy is often based on range (as shown above) or hashing (e.g., user_id % num_shards).
+
+**Query Example:**
+- When an application requests data for user_id = 500,000, the Shard Router will direct this request only to Shard 1.
+- When a request comes for user_id = 1,500,000, it is routed only to Shard 2.
+- This way, each shard only needs to handle queries and writes for its specific subset of data, dramatically improving performance and reducing the load on individual servers.
+
+##### 4. Advantages of Sharding:
+- **Reduced Read and Write Traffic:** Each shard handles only a fraction of the total data, significantly reducing the I/O load and processing for read and write operations.
+- **Increased Cache Hits:** Because each shard's dataset is smaller, it's more likely that frequently accessed data will reside in the server's cache, leading to faster data retrieval.
+- **Reduced Index Size:** Each shard maintains an index only for its portion of the data. Smaller indexes are faster to search and manage, boosting query performance.
+- **Improved Overall Performance:** All the above factors combine to drastically improve query execution times and overall system responsiveness.
+- **Enhanced Fault Tolerance (Fault Isolation):** If one shard fails (e.g., due to hardware malfunction), only the data on that specific shard becomes unavailable. The rest of the system (other shards) continues to operate normally, preventing a complete system outage.
+  - (Note: To prevent data loss on a failed shard, some form of replication within each shard's cluster is crucial.)
+- **Increased Write Throughput (Parallel Writes):** Similar to federation, there's no single central master serializing all writes. Each shard can process writes for its data partition independently and in parallel, leading to a much higher overall write throughput.
+- **Scalability (Horizontal Scaling):** As the number of users or data grows, you can easily add more shards to the cluster, distributing the load further. This allows the system to scale almost indefinitely without upgrading existing hardware to larger, more expensive machines (vertical scaling).
+
+##### 5. Challenges of Sharding:
+- **Complexity:** Implementing, managing, and maintaining a sharded database system is significantly more complex than a single monolithic database.
+- **Shard Key Selection:** Choosing the right shard key is critical. A poor choice can lead to:
+  - Hotspots: Uneven data distribution where one shard receives a disproportionately large amount of traffic, becoming a bottleneck.
+  - Data Imbalance: Some shards having much more data than others.
+- **Resharding:** As data grows or access patterns change, you might need to re-distribute data across new or existing shards. This process (resharding or rebalancing) can be complex, time-consuming, and may require downtime.
+- **Distributed Transactions:** If a single transaction needs to modify data that spans across multiple shards, managing transaction atomicity and consistency (ACID properties) becomes much harder and requires specialized solutions.
+- **Joins Across Shards:** Queries that require joining data from different shards can be complex and less efficient than joins within a single database.
+- **Operational Overhead:** Backup, recovery, and monitoring across multiple independent shards require more sophisticated tools and procedures.
+
+##### Conclusion:
+Sharding is a powerful and essential technique for handling very large datasets and high-traffic applications. It enables horizontal scaling, dramatically improves performance, and provides increased fault tolerance. However, its implementation comes with significant operational complexities and requires careful planning, especially regarding shard key selection and managing distributed transactions.
