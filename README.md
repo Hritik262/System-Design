@@ -10,6 +10,7 @@
 - [Service Discovery](#service-discovery-brief-notes)
 - [Horizontal Scaling](#horizontal-scaling)
 - [Application Layer](#application-layer-separation-from-web-layer)
+- [Databases](#databases)
 
 ## Domain Name System
 A Domain Name System (DNS) translates a domain name such as www.example.com to an IP address.
@@ -330,3 +331,33 @@ Modern applications have dynamic services (IPs change, instances come and go), m
 #### Key-Value Store (Optional)
 - Some systems like Consul and Etcd include a built-in key-value store.
 - Useful for storing configuration values (e.g., database credentials, feature flags) and other shared application data.
+
+## Databases
+
+### Importance of Database Selection
+Picking the right database for a system is an important decision, as it can have a significant impact on the performance, scalability, and overall success of the system. Some of the key reasons why it's important to pick the right database include:
+
+- **Performance**: Different databases have different performance characteristics, and choosing the wrong one can lead to poor performance and slow response times.
+
+- **Scalability**: As the system grows and the volume of data increases, the database needs to be able to scale accordingly. Some databases are better suited for handling large amounts of data than others.
+
+- **Data Modeling**: Different databases have different data modeling capabilities and choosing the right one can help to keep the data consistent and organized.
+
+- **Data Integrity**: Different databases have different capabilities for maintaining data integrity, such as enforcing constraints, and can have different levels of data security.
+
+- **Support and maintenance**: Some databases have more active communities and better documentation, making it easier to find help and resources.
+
+### NoSQL Databases
+
+#### Key Value Store
+A key-value store generally allows for O(1) reads and writes and is often backed by memory or SSD. Data stores can maintain keys in lexicographic order, allowing efficient retrieval of key ranges. Key-value stores can allow for storing of metadata with a value.
+
+Key-value stores provide high performance and are often used for simple data models or for rapidly-changing data, such as an in-memory cache layer. Since they offer only a limited set of operations, complexity is shifted to the application layer if additional operations are needed.
+
+#### Document Store (Concise Notes)
+- **Definition**: Document-centric database, stores whole objects as documents (JSON, XML, BSON).
+- **Structure**: Each document is self-contained with its own internal structure.
+- **Querying**: Rich APIs/languages to query within the document's structure.
+- **Grouping**: Documents organized into collections, tags, etc.
+- **Schema Flexibility**: Crucial! No fixed schema; documents in same group can have different fields.
+- **Overlap**: Blurring lines with Key-Value stores having metadata features.
