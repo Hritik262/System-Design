@@ -829,6 +829,70 @@ In this strategy, the application writes data to the cache, which then asynchron
 #### Write-through
 The application writes data to both the cache and the data source simultaneously. This ensures data consistency between the cache and the data source, but may result in slower write operations.
 
+![Write-Through Caching](images/writeThrough.png)
+
+##### Write-Through Caching Strategy Notes
+
+**1. Definition and Core Mechanism:**
+- **Definition**: In the Write-Through caching strategy, the cache acts as the main data store from the application's perspective. When the application writes data, it writes directly to the cache, and the cache is then responsible for synchronously writing that data to the underlying persistent data store (e.g., a database).
+- **Process Flow**:
+  1. **Application Initiates Write**: The application sends a data write (add/update) request to the cache.
+  2. **Cache Updates Itself**: The cache updates the corresponding entry within its own storage.
+  3. **Cache Synchronously Writes to Data Store**: The cache immediately, and synchronously, writes the data to the persistent data store (database). This means the cache operation waits for the database write to complete.
+  4. **Return to Application**: Only after the database write is confirmed successful (and the cache itself is updated) does the cache return a success acknowledgment to the application.
+
+- **Example (Conceptual Code)**:
+  - Application Code:
+  ```python
+  set_user(12345, {"foo": "bar"}) # Application tells the cache to update user data
+  ```
+
+  - Cache Logic (Internal):
+  ```python
+  def set_user_in_cache(user_id, values):
+      # 1. Update the underlying persistent store (DB) first
+      #    This operation is synchronous; the cache waits for it.
+      db_response = database.update("Users", user_id, values)
+
+      # 2. If DB update is successful, then update the cache
+      if db_response.success:
+          cache_storage.set(user_id, values) # Update internal cache
+          return True
+      else:
+          return False # Handle DB write failure
+  ```
+
+  (Note: The provided example cache.set(user_id, user) implies the cache is abstracting the DB interaction. The key is that the DB write happens before the cache confirms success to the application.)
+
+**2. Advantages of Write-Through:**
+- **High Data Consistency**: Since every write operation updates both the cache and the persistent data store synchronously, the data in the cache is always consistent with the data in the database.
+- **High Data Durability (No Data Loss)**: In case the cache server crashes or becomes unavailable, the data is already safely stored in the persistent database. There is no risk of data loss due to cache failure on write operations.
+- **Simpler Error Handling for Writes**: If a database write fails, the cache can immediately report the failure back to the application, as the operation is synchronous.
+- **Fast Subsequent Reads**: Once data is written via write-through, it resides in the cache. Any subsequent read requests for this data will be served directly from the fast cache, leading to improved read performance.
+- **User Tolerance for Write Latency**: Users are generally more tolerant of slight delays when performing update or save operations (e.g., submitting a form) compared to reading information. Write-through capitalizes on this by ensuring data safety without significantly impacting perceived read performance.
+- **Cache Data is Not Stale**: Due to the synchronous update of both cache and database, data within the cache is guaranteed to be current for any items written through it.
+
+**3. Disadvantages of Write-Through:**
+- **Slow Overall Write Performance**:
+  - This is the primary drawback. Write operations are inherently slower because the application (and the cache) must wait for the underlying database write to complete. This introduces latency from network communication to the database and the database's own write processing time.
+  - It is not ideal for applications requiring very high write throughput.
+- **Cold Start Problem for New Nodes (or empty cache)**:
+  - When a new cache node is added (due to scaling or recovery from failure) or an existing cache is entirely empty, it contains no data.
+  - This new node will not have any cached entries until data is explicitly written to the database (and thus through the write-through cache).
+  - Consequently, initial read requests to this new node will result in cache misses, requiring direct fetches from the slower database, increasing initial latency and database load until the cache warms up.
+- **Potential for Wasted Cache Space**:
+  - It's possible that data written through the cache may never be read again. In such cases, occupying cache memory with this infrequently accessed data can be inefficient.
+  - Mitigation: This can be minimized by implementing a Time To Live (TTL) mechanism for cache entries. Entries automatically expire and are removed from the cache after a set period, freeing up space.
+
+**4. When to Use Write-Through:**
+- **Data Consistency is Paramount**: When it's critical that the cache and the database are always synchronized.
+- **High Read-to-Write Ratio**: Applications that perform significantly more read operations than write operations.
+- **Low Write Throughput Requirements**: When the application does not need extremely fast write speeds.
+- **Complex Data Relationships**: Where immediate database updates are important to maintain data integrity across multiple tables or systems.
+
+**5. Relationship with Other Strategies:**
+- **Mitigating Cold Start with Cache-Aside**: The "Cold Start Problem" in write-through can be mitigated by combining it with a Cache-Aside strategy for reads. If a read request results in a cache miss, the application (or the cache layer itself) fetches the data from the database and populates the cache before returning it to the client. This "fills" the cache on demand.
+
 #### Cache Aside
 The application is responsible for reading and writing from the data source and the cache. When reading data, the application first checks the cache; if the data is not found (a cache miss), it reads from the data source and then writes to the cache. When writing data, the application writes directly to the data source and invalidates the corresponding cache entry.
 
