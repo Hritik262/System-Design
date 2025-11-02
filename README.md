@@ -11,6 +11,7 @@
 - [Horizontal Scaling](#horizontal-scaling)
 - [Application Layer](#application-layer-separation-from-web-layer)
 - [Databases](#databases)
+- [Caching](#caching)
 
 ## Domain Name System
 A Domain Name System (DNS) translates a domain name such as www.example.com to an IP address.
@@ -347,6 +348,77 @@ Picking the right database for a system is an important decision, as it can have
 
 - **Support and maintenance**: Some databases have more active communities and better documentation, making it easier to find help and resources.
 
+### SQL vs NoSQL Databases Notes
+
+#### 1. SQL Databases (Examples: MySQL, PostgreSQL, Oracle, SQL Server)
+
+**Best Suited For:**
+- **Structured, Relational Data**: Data that adheres to a predefined schema and has well-defined relationships between different data entities.
+- **Examples**: E-commerce platforms (customer, order, product relationships), banking systems, financial records, inventory management, traditional CRM systems.
+
+**Key Characteristics:**
+- **Fixed/Rigid Schema**: Data must conform to a strict, predefined structure (tables, columns, data types) before it can be stored. Schema changes typically require altering the table structure, which can be complex and time-consuming for large datasets.
+  - **Example**: Defining a Users table with id (INT PRIMARY KEY), name (VARCHAR(100)), email (VARCHAR(100) UNIQUE).
+- **ACID Transactions** (Atomicity, Consistency, Isolation, Durability): SQL databases strongly guarantee ACID properties, which are crucial for data integrity and reliability.
+  - **Atomicity**: All operations within a transaction either complete successfully or none of them do.
+  - **Consistency**: A transaction brings the database from one valid state to another.
+  - **Isolation**: Concurrent transactions execute independently without interfering with each other.
+  - **Durability**: Once a transaction is committed, its changes are permanent, even in the event of system failures.
+  - **Example**: A bank transfer where money is debited from one account and credited to another; both actions must succeed or neither.
+- **Complex Queries & Joins**: They excel at performing complex queries and efficient JOIN operations across multiple related tables. SQL (Structured Query Language) is a powerful language for data manipulation and retrieval.
+  - **Example**: Joining Customers, Orders, and Products tables to find out which customer bought which product on what date.
+
+**Advantages**: Strong data consistency, excellent for managing complex relationships, high data integrity, mature technology with wide support.
+
+**Disadvantages**: Can be challenging to scale horizontally (scaling typically involves vertical scaling initially), less flexible schema can hinder rapid development or evolution with changing data requirements.
+
+#### 2. NoSQL Databases (Examples: MongoDB, Cassandra, Redis, Neo4j)
+
+**Best Suited For:**
+- **Unstructured, Non-Relational Data**: Data that doesn't have a fixed schema, or whose structure changes frequently. Often categorized by data model (e.g., Document, Key-Value, Column-Family, Graph).
+- **Examples**: Social media feeds, user activity logs, real-time analytics, IoT sensor data, content management systems, user profiles in web/mobile apps.
+
+**Key Characteristics:**
+- **Flexible/Dynamic Schema (Schema-less)**: No predefined schema is required. Each record (e.g., a "document" in MongoDB) can have its own unique structure. This allows for rapid development and easy adaptation to evolving data models.
+  - **Example (MongoDB Document)**:
+  ```json
+  {
+    "name": "Alice",
+    "age": 30,
+    "city": "New York"
+  }
+  // Another document in the same collection
+  {
+    "name": "Bob",
+    "email": "bob@example.com",
+    "hobbies": ["coding", "gaming"]
+  }
+  ```
+  Notice how Alice has city and Bob has email and hobbies, without a rigid table structure.
+- **High Scalability & Performance**: Designed for horizontal scaling (distributing data across many servers or clusters), making them ideal for handling massive amounts of data and high throughput. They can offer high performance for specific access patterns.
+- **Big Data and Real-time Web Applications**: Commonly used in environments where large volumes of data need to be stored and accessed quickly, such as real-time recommendation engines or user activity streams.
+
+**Advantages**: Handles unstructured data perfectly, high horizontal scalability, high performance for specific data access patterns, rapid development due to schema flexibility.
+
+**Disadvantages**: Generally do not provide full ACID guarantees (often opting for "eventual consistency" for better availability/performance), complex joins are difficult or must be handled at the application layer, data consistency is not as strong as in SQL.
+
+#### 3. Choosing Between SQL and NoSQL (Depends on Use Case):
+
+**Choose SQL if:**
+- You require structured data with complex relationships.
+- Strong data integrity and ACID transactions are paramount (e.g., financial systems).
+- You anticipate needing complex queries and joins.
+- Your data model is stable and unlikely to change frequently.
+
+**Choose NoSQL if:**
+- You need to store large amounts of unstructured or semi-structured data.
+- High scalability (especially horizontal) and performance are your top priorities.
+- Your data model is flexible or frequently evolving.
+- You are building big data or real-time web applications.
+
+**Conclusion:**
+Neither SQL nor NoSQL databases are universally "better." Both have their distinct strengths and weaknesses. The appropriate choice hinges on the specific needs of your project, the nature of your data, scalability requirements, and consistency demands. Many modern applications adopt a hybrid approach (polyglot persistence), utilizing both SQL and NoSQL databases for different parts of their data storage strategy.
+
 ### NoSQL Databases
 
 #### Key Value Store
@@ -629,3 +701,150 @@ We've split the database system into three separate databases based on functiona
 
 ##### Conclusion:
 Federation is a very effective strategy for scaling large and feature-rich applications. It improves performance in specific functional areas, provides fault isolation, and simplifies maintenance. It's a natural fit for microservices architecture. However, distributed data management comes with its own complexities that need careful consideration, especially when cross-functional queries or transactions are required.
+
+#### Denormalization
+Denormalization attempts to improve read performance at the expense of some write performance. Redundant copies of the data are written in multiple tables to avoid expensive joins. Some RDBMS such as PostgreSQL and Oracle support materialized views which handle the work of storing redundant information and keeping redundant copies consistent.
+
+Once data becomes distributed with techniques such as federation and sharding, managing joins across data centers further increases complexity. Denormalization might circumvent the need for such complex joins.
+
+#### SQL Tuning Notes
+
+##### 1. What is SQL Tuning?
+- **Definition**: SQL tuning is the systematic process of identifying, diagnosing, and optimizing SQL statements (queries) that do not meet desired performance standards.
+- **Objective**: To make database operations faster, more efficient, and more reliable, thereby improving the overall responsiveness and scalability of an application.
+- **Methodology**: Involves analyzing queries, understanding their execution plans, and making targeted changes to reduce resource consumption (CPU, memory, disk I/O) and execution time.
+
+##### 2. Breadth of the Topic:
+- SQL tuning is a vast and complex subject, with numerous books and resources dedicated to it.
+- **Reasons for Complexity**:
+  - Varies significantly across different database systems (e.g., MySQL, PostgreSQL, Oracle, SQL Server).
+  - Optimization strategies depend heavily on specific application requirements and data access patterns.
+  - Encompasses various aspects, including database schema design, indexing strategies, hardware resources, and even operating system configurations.
+
+##### 3. Identifying Performance Bottlenecks:
+The initial crucial step in SQL tuning is to effectively pinpoint where performance issues lie. This is primarily done through two methods:
+
+**A. Benchmarking**:
+- **Purpose**: To simulate and evaluate how the database system performs under high-load situations (heavy traffic or numerous concurrent requests).
+- **Benefit**: Uncovers system limitations, bottlenecks, and potential performance degradation points that might not be apparent under normal operating conditions.
+- **Tools**: ApacheBench (ab), JMeter, Gatling, k6.
+- **Example Usage**: Running `ab -n 1000 -c 100 http://yourwebsite.com/api/products` to simulate 100 concurrent users making 1000 requests, and observing if the database slows down.
+
+**B. Profiling**:
+- **Purpose**: To track and analyze specific performance issues within a live or test database environment. It helps identify which queries are consuming the most time or resources.
+- **Benefit**: Pinpoints the exact problematic queries or operations.
+- **Tools & Techniques**:
+  - **Slow Query Log** (available in MySQL, PostgreSQL, SQL Server): A database feature that automatically logs queries exceeding a predefined execution time limit (e.g., 2 seconds).
+    - Example (MySQL): Checking `long_query_time` variable to see the threshold.
+  - **Execution Plans** (e.g., EXPLAIN in PostgreSQL/MySQL, SHOWPLAN in SQL Server): Shows how the database engine plans to execute a query. This reveals information like index usage, number of rows scanned, and table join order.
+    - Example: `EXPLAIN SELECT * FROM orders WHERE order_date < '2023-01-01';`
+  - **Database Monitoring Tools**: Such as Prometheus, Grafana, DataDog, New Relic, which track real-time performance metrics (CPU usage, memory, disk I/O, active connections).
+
+##### 4. Common Optimizations Following Benchmarking and Profiling:
+The insights gained from benchmarking and profiling often lead to the following types of optimizations:
+
+**A. Indexing**:
+- **Key Optimization**: Often the most effective. Missing or inappropriate indexes can severely degrade query performance.
+- **Scenario**: If a WHERE clause (e.g., `WHERE order_date < '2023-01-01'`) is used on an unindexed column, the database may perform a full table scan. Adding an index allows direct access to relevant rows.
+
+**B. Query Rewriting/Optimization**:
+- **Technique**: Modifying queries to be more efficient.
+- **Examples**:
+  - Selecting only necessary columns (e.g., `SELECT name, email` instead of `SELECT *`).
+  - Converting subqueries to JOINs or vice versa based on performance characteristics.
+  - Effective use of LIMIT clauses for pagination.
+
+**C. Database Schema Changes**:
+- **Addressing Structural Issues**: Sometimes performance problems stem from the database's design.
+- **Examples**:
+  - Denormalization (as discussed previously) to avoid expensive joins.
+  - Correcting inappropriate data types (e.g., using INT instead of VARCHAR for numeric IDs).
+
+**D. Hardware Upgrades**:
+- **Physical Resource Enhancement**: If software-level tuning has been exhausted, the system might require more robust hardware (e.g., more CPU, RAM, faster storage like SSDs).
+
+**E. Database Configuration Tuning**:
+- **Server Parameter Adjustment**: Fine-tuning internal database server parameters (e.g., buffer pool size, cache sizes, connection limits) to optimize resource allocation and behavior.
+
+**F. Application-Level Caching**:
+- **Reducing Database Load**: Implementing caching at the application layer for frequently accessed data reduces the number of direct database queries.
+
+##### Conclusion:
+SQL tuning is an iterative and ongoing process. By leveraging benchmarking and profiling tools to identify bottlenecks, and then applying optimizations such as indexing, query rewriting, schema adjustments, and hardware upgrades, the ultimate goal is to enhance user experience and ensure efficient utilization of system resources.
+
+## Caching
+
+Caching is the process of storing frequently accessed data in a temporary storage location, called a cache, in order to quickly retrieve it without the need to query the original data source. This can improve the performance of an application by reducing the number of times a data source must be accessed.
+
+### Caching Strategies
+
+#### Refresh Ahead
+The cache automatically refreshes any recently accessed cache entry prior to its expiration. This strategy can help avoid cache misses, but may lead to unnecessary cache updates if data is not accessed again before expiration.
+
+##### Refresh-ahead Caching Strategy Notes
+
+**1. What is Refresh-ahead?**
+- **Core Concept**: A caching strategy where a cache entry is automatically updated or refreshed before it actually expires.
+- **Mechanism**: You configure the cache system to proactively fetch fresh data from the original data source for recently accessed cache entries (items that have been queried or used recently) just prior to their configured expiration time.
+- **Objective**: To ensure that fresh data is always available in the cache when requested by a client, minimizing perceived latency.
+
+**2. Advantage of Refresh-ahead:**
+- **Reduced Latency vs. Read-through/Cache-Aside**:
+  - In Read-through or Cache-Aside strategies, when a cache entry expires or is not found (cache miss), the application must query the original data source. This introduces latency as the user waits for the data to be fetched from the slower source.
+  - With Refresh-ahead, if the cache can accurately predict which items are likely to be needed in the future (i.e., those recently accessed), it refreshes them asynchronously in the background before they are requested.
+  - **Result**: When a user or application requests the data, it finds a fresh copy already in the cache, leading to virtually zero perceived latency from a cache miss, thus significantly improving response times.
+  - **Example**: For frequently accessed data like stock prices or news headlines, the cache can refresh this data just before it expires. When a user checks the latest prices/news, the data is already up-to-date in the cache.
+
+**3. Disadvantage of Refresh-ahead:**
+- **Risk of Inaccurate Prediction leading to Reduced Performance**:
+  - The primary drawback of Refresh-ahead arises when the cache fails to accurately predict which items will actually be needed in the future.
+  - If the cache refreshes data that is not subsequently requested by a client, it can lead to a reduction in overall performance rather than an improvement.
+  - **Reasons for Performance Reduction**:
+    - **Wasteful Resource Usage**: The system expends resources (network bandwidth, database CPU/I/O, cache server processing) making unnecessary calls to the original data source to refresh data that nobody will use.
+    - **Increased Load on Source**: The original data source (e.g., database) experiences higher load from these proactive, potentially unneeded refresh operations.
+    - **Stale Data Risk (in specific scenarios)**: If data is refreshed but not used, and then the original data changes again shortly after the proactive refresh, the cache might still hold outdated data if it's not accessed again until much later. (Though less common than the resource waste problem).
+
+**Analogy**:
+- Imagine a buffet where food is prepared (data fetched).
+- **Standard Buffet (Read-through/Cache-Aside)**: A dish runs out (cache expires/misses). The chef only starts cooking a new batch after a customer asks for it. The customer waits.
+- **Refresh-ahead (with good prediction)**: The chef notices that Pasta is always popular. He sees a dish of Pasta getting low, and before it's completely empty, he starts cooking a new batch. When the next customer asks for Pasta, it's already ready. No wait.
+- **Refresh-ahead (with bad prediction)**: The chef thinks the Fish dish will be popular and starts cooking a new batch before the old one is empty. But no one asks for Fish. Resources (ingredients, cooking time) were wasted on a dish that wasn't eaten, potentially at the expense of cooking another popular dish faster.
+
+**Conclusion**:
+Refresh-ahead is a powerful strategy for improving user-perceived latency, especially for predictable access patterns. However, its effectiveness heavily relies on the ability to accurately predict future data access. If predictions are poor, the overhead of unnecessary refreshes can negate performance benefits and increase resource consumption.
+
+#### Write-Behind
+In this strategy, the application writes data to the cache, which then asynchronously writes the data back to the data source. This can improve write performance as the application doesn't need to wait for the data to be written to the data source.
+
+##### How Write-behind Works:
+- Add/update entry in cache
+- Asynchronously write entry to the data store, improving write performance
+
+![Write-Behind Caching](images/writeBehind.png)
+
+##### Disadvantages of Write-behind:
+- There could be data loss if the cache goes down prior to its contents hitting the data store.
+- It is more complex to implement write-behind than it is to implement cache-aside or write-through.
+
+#### Write-through
+The application writes data to both the cache and the data source simultaneously. This ensures data consistency between the cache and the data source, but may result in slower write operations.
+
+#### Cache Aside
+The application is responsible for reading and writing from the data source and the cache. When reading data, the application first checks the cache; if the data is not found (a cache miss), it reads from the data source and then writes to the cache. When writing data, the application writes directly to the data source and invalidates the corresponding cache entry.
+
+### Caching Locations
+
+#### Client Caching
+Caching that occurs on the client side, such as browser caching. This can include HTML pages, JavaScript files, stylesheets, and images.
+
+#### CDN Caching
+Content Delivery Networks cache content at various points of presence (PoPs) around the world, reducing latency for users by serving content from a location closer to them.
+
+#### Web Server Caching
+Web servers can cache dynamic content to reduce the load on application servers and databases. This can include full page caching, fragment caching, and object caching.
+
+#### Database Caching
+Databases often include their own caching mechanisms to improve performance, such as query caches and buffer pools.
+
+#### Application Caching
+Application-level caching involves storing the results of expensive operations, such as complex database queries or API calls, in memory for quick access. This can be implemented using tools like Redis or Memcached.
